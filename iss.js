@@ -1,21 +1,24 @@
-const assert = require('assert');
-const { fetchMyIP } = require('./iss');
+const request = require('request');
 
-describe('fetchMyIP', function() {
-  it('should return the IP address as a string', function(done) {
-    fetchMyIP((error, ip) => {
-      assert.strictEqual(error, null);
-      assert.strictEqual(typeof ip, 'string');
-      done();
-    });
-  });
+const fetchCoordsByIP = function(ip, callback) {
+  request(`http://ipwho.is/${ip}`, (error, response, body) => {
+    if (error) {
+      callback(error, null);
+      return;
+    }
 
-  it('should return an error if request fails', function(done) {
-    // Mocking a request failure by passing an invalid URL
-    fetchMyIP('invalid-url', (error, ip) => {
-      assert.ok(error instanceof Error);
-      assert.strictEqual(ip, null);
-      done();
-    });
+    const parsedBody = JSON.parse(body);
+
+    if (!parsedBody.success) {
+      const message = `Success status was ${parsedBody.success}. Server message says: ${parsedBody.message} when fetching for IP ${parsedBody.ip}`;
+      callback(new Error(message), null);
+      return;
+    }
+
+    const { latitude, longitude } = parsedBody;
+
+    callback(null, { latitude, longitude });
   });
-});
+};
+
+module.exports = { fetchCoordsByIP };
